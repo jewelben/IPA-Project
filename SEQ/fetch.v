@@ -21,6 +21,7 @@ output reg[3:0] rB;
 output reg [63:0] valC;
 output reg [63:0] valP;
 output reg [2:0] status_condition;
+
 /* 
     status_condition is,
         AOK => Normal operation => 001
@@ -43,9 +44,11 @@ begin
     end
 
     /* 
-        ************************************************
+
+        ***********************************************************************
         ***********Hardcode instructions here, in instruction memory***********
-        ************************************************
+        ***********************************************************************
+
     */
 
     OPCODE = instruction_memory[PC];
@@ -53,7 +56,8 @@ begin
     icode = OPCODE[0:3];
     ifun = OPCODE[4:7];
     // OPCODE = icode ifun
-
+always@(posedge clk)
+begin
     if (icode == 4'b0000)   // halt
     begin
         instruction = instruction_memory[PC];   // Instruction length is 1 byte
@@ -142,8 +146,6 @@ end
 
 
 endmodule
-
-
 
 
 
