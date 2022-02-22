@@ -2,17 +2,18 @@
 
 module write_back(
     input clk,
-    input reg [3:0] icode,
-    input reg [63:0] rA,
-    input reg [63:0] rB,
-    input reg [63:0] valA,
-    input reg [63:0] valB,
-    input reg [63:0] valE,
-    input reg [63:0] valM,
+    input [3:0] icode,
+    input [3:0] rA,
+    input [3:0] rB,
+    input [63:0] valA,
+    input [63:0] valB,
+    input [63:0] valE,
+    input [63:0] valM,
+    output reg [63:0] dstE, // output for testing purposes
+    output reg [63:0] dstM // output for testing purposes
 );
 
-reg [63:0] dstE;
-reg [63:0] dstM;
+reg [63:0] register_memory[0:14];
 
 always@(posedge clk)
 begin
@@ -34,8 +35,8 @@ begin
     end
     if(icode==4'b1011) //popq
     begin
-        register_mem[4] = valE;
-        register_mem[rA] = valM;
+        register_memory[4] = valE;
+        register_memory[rA] = valM;
     end
 
 end
