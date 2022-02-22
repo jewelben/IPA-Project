@@ -1,151 +1,196 @@
-`timescale 1ns/1ps
+module fetch (clk, PC, icode, ifun, rA, rB, valC, valP, hlt, imem_error, instr_valid);
 
-module fetch(
-    clk,
-    icode,
-    ifun,
-    rA,
-    rB,
-    PC,
-    valC,
-    valP,
-    status_condition
-);
+	input clk;
+	input [63:0] PC;
+	output reg [ 3:0] icode;
+	output reg [ 3:0] ifun;
+	output reg [ 3:0] rA;
+	output reg [ 3:0] rB;
+	output reg [63:0] valC;
+	output reg [63:0] valP;
+	output reg hlt;
+	output reg imem_error;
+	output reg instr_valid;
 
-input clk;
-input [63:0] PC; // Assuming PC can take values 0 to 1023
-output reg [3:0] icode;
-output reg [3:0] ifun;
-output reg [3:0] rA;
-output reg[3:0] rB;
-output reg [63:0] valC;
-output reg [63:0] valP;
-output reg [2:0] status_condition;
+	initial begin
+	rA = 4'b1111;
+	rB = 4'b1111;
+	valC = 64'd0;
+	valP = 64'd0;
+	hlt = 0;
+	imem_error = 0;
+	instr_valid = 1;
+	end
 
-/* 
-    status_condition is,
-        AOK => Normal operation => 001
-        HLT => Halt instruction encountered => 010
-        ADR => Bad address encountered => 011
-        INS => Invalid instruction encountered => 100
+	reg [7:0] instruction_memory [1023:0];
+	initial begin
+		// 30 f0 00 00 00 00 00 00 00 00 | irmovq $12, %rax
+		instruction_memory[0] = 8'h30;
+		instruction_memory[1] = 8'hf0;
+		instruction_memory[2] = 8'h0c;
+		instruction_memory[3] = 8'h00;
+		instruction_memory[4] = 8'h00;
+		instruction_memory[5] = 8'h00;
+		instruction_memory[6] = 8'h00;
+		instruction_memory[7] = 8'h00;
+		instruction_memory[8] = 8'h00;
+		instruction_memory[9] = 8'h00;
 
-    If AOK, keep going, otherwise stop program execution
-*/
+		// // 00 | halt
+		// instruction_memory[0] = 8'h00;
 
-reg OPCODE [7:0];    // 1-10 bytes of instruction
-reg [7:0] instruction_memory [1023:0];
-reg [79:0] instruction; // 1-10 byte long instructions
-always@(posedge clk)
-begin
+		// // ff | INVALID
+		// instruction_memory[0] = 8'hff;
+	end
 
-    if (PC > 2047 || PC < 0) // Bad instruction memory address, ADR
-    begin
-        status_condition = 3'b011;
-    end
+	reg [7:0] opcode;
+	reg [7:0] regids;
 
-    /* 
+	always @(posedge clk) begin
+		if (PC > 1023) begin
+			imem_error = 1;
+		end
 
-        ***********************************************************************
-        ***********Hardcode instructions here, in instruction memory***********
-        ***********************************************************************
+		opcode = instruction_memory[PC];
+		icode = opcode[7:4];
+		ifun = opcode[3:0];
 
-    */
+		// halt
+		if (icode == 4'b0000) begin
+			hlt = 1;
+			valP = PC + 1;
+		end
 
-    OPCODE = instruction_memory[PC];
+		// nop
+		else if (icode == 4'b0001) begin
+			valP = PC + 1;
+		end
 
-    icode = OPCODE[0:3];
-    ifun = OPCODE[4:7];
-    // OPCODE = icode ifun
-always@(posedge clk)
-begin
-    if (icode == 4'b0000)   // halt
-    begin
-        instruction = instruction_memory[PC];   // Instruction length is 1 byte
-        valP = PC + 64'd1;
-        status_condition = 3'b010;  // Halt instruction encountered, HLT
-    end
-    else if(icode == 4'b0001)   // nop
-    begin
-        instruction = instruction_memory[PC];   // Instruction length is 1 byte
-        valP = PC + 64'd1;
-    end
-    else if(icode == 4'b0010)   //cmovxx
-    begin
-        instruction = instruction_memory[PC:PC+1];   // Instruction length is 2 bytes
-        rA = instruction[8:11];
-        rB = instruction[12:15];
-        valP = PC + 64'd2;
-    end
-    else if(icode == 4'b0011)   //irmovq
-    begin
-        instruction = instruction_memory[PC:PC+9];  // Instruction length is 10 bytes
-        rA = instruction[8:11];
-        rB = instruction[12:15];
-        valC = instruction[16:79];
-        valP = PC + 64d'10;
-    end
-    else if(icode == 4b'0100)   //rmmovq
-    begin
-        instruction = instruction_memory[PC:PC+9];  // Instruction length is 10 bytes
-        rA = instruction[8:11];
-        rB = instruction[12:15];
-        valC = instruction[16:79];
-        valP = PC + 64d'10;
-    end
-    else if(icode == 4b'0101)   //  mrmovq
-    begin
-        instruction = instruction_memory[PC:PC+9];  // Instruction length is 10 bytes
-        rA = instruction[8:11];
-        rB = instruction[12:15];
-        valC = instruction[16:79];
-        valP = PC + 64d'10;
-    end
-    else if(icode == 4b'0110)   // OPq
-    begin
-        instruction = instruction_memory[PC:PC+1];   // Instruction length is 2 bytes
-        rA = instruction[8:11];
-        rB = instruction[12:15];
-        valP = PC + 64'd2;
-    end
-    else if(icode == 4b'0111)   // jXX
-    begin
-        instruction = instruction_memory[PC:PC+9];  // Instruction length is 9 bytes
-        valC = instruction[8:71];
-        valP = PC + 64d'9;    
-    end
-    else if(icode == 4b'1000)   // call
-    begin
-        instruction = instruction_memory[PC:PC+9];  // Instruction length is 9 bytes
-        valC = instruction[8:71];
-        valP = PC + 64d'9;        
-    end
-    else if(icode == 4b'1001)   // ret
-    begin
-        instruction = instruction_memory[PC];   // Instruction length is 1 byte
-        valP = PC + 64'd1;
-    end
-    else if(icode == 4b'1010)   // pushq
-    begin
-        instruction = instruction_memory[PC:PC+1];   // Instruction length is 2 bytes
-        rA = instruction[8:11];
-        rB = instruction[12:15];
-        valP = PC + 64'd2;
-    end
-    else if(icode == 4b'1011)   // popq
-    begin
-        instruction = instruction_memory[PC:PC+1];   // Instruction length is 2 bytes
-        rA = instruction[8:11];
-        rB = instruction[12:15];
-        valP = PC + 64'd2;
-    end
-    else    // invalid icode or OPCODE
-    begin
-        status_condition = 3b'100;  // Invalid instruction encountered, INS
-    end
-end
+		// cmovxx rA, rB
+		else if (icode == 4'b0010) begin
+			regids = instruction_memory[PC + 1];
+			rA = regids[7:4];
+			rB = regids[3:0];
+			valP = PC + 2;
+		end
 
+		// irmovq V, rB
+		else if (icode == 4'b0011) begin
+			regids = instruction_memory[PC + 1];
+			rA = regids[7:4];
+			rB = regids[3:0];
+			valC = {
+			    instruction_memory[PC + 9],
+			    instruction_memory[PC + 8],
+			    instruction_memory[PC + 7],
+			    instruction_memory[PC + 6],
+			    instruction_memory[PC + 5],
+			    instruction_memory[PC + 4],
+			    instruction_memory[PC + 3],
+			    instruction_memory[PC + 2]
+			};
+			valP = PC + 10;
+		end
+
+		// rmmovq rA, D(rB)
+		else if (icode == 4'b0100) begin
+			regids = instruction_memory[PC + 1];
+			rA = regids[7:4];
+			rB = regids[3:0];
+			valC = {
+			    instruction_memory[PC + 9],
+			    instruction_memory[PC + 8],
+			    instruction_memory[PC + 7],
+			    instruction_memory[PC + 6],
+			    instruction_memory[PC + 5],
+			    instruction_memory[PC + 4],
+			    instruction_memory[PC + 3],
+			    instruction_memory[PC + 2]
+			};
+			valP = PC + 10;
+		end
+
+		// mrmovq D(rB), rA
+		else if (icode == 4'b0101) begin
+			regids = instruction_memory[PC + 1];
+			rA = regids[7:4];
+			rB = regids[3:0];
+			valC = {
+			    instruction_memory[PC + 9],
+			    instruction_memory[PC + 8],
+			    instruction_memory[PC + 7],
+			    instruction_memory[PC + 6],
+			    instruction_memory[PC + 5],
+			    instruction_memory[PC + 4],
+			    instruction_memory[PC + 3],
+			    instruction_memory[PC + 2]
+			};
+			valP = PC + 10;
+		end
+
+		// OPq rA, rB
+		else if (icode == 4'b0110) begin
+			regids = instruction_memory[PC + 1];
+			rA = regids[7:4];
+			rB = regids[3:0];
+			valP = PC + 2;
+		end
+
+		// jXX Dest
+		else if (icode == 4'b0111) begin
+			valC = {
+			    instruction_memory[PC + 8],
+			    instruction_memory[PC + 7],
+			    instruction_memory[PC + 6],
+			    instruction_memory[PC + 5],
+			    instruction_memory[PC + 4],
+			    instruction_memory[PC + 3],
+			    instruction_memory[PC + 2],
+			    instruction_memory[PC + 1]
+			};
+			valP = PC + 9;
+		end
+
+		// call Dest
+		else if (icode == 4'b1000) begin
+			valC = {
+			    instruction_memory[PC + 8],
+			    instruction_memory[PC + 7],
+			    instruction_memory[PC + 6],
+			    instruction_memory[PC + 5],
+			    instruction_memory[PC + 4],
+			    instruction_memory[PC + 3],
+			    instruction_memory[PC + 2],
+			    instruction_memory[PC + 1]
+			};
+			valP = PC + 9;		
+		end
+
+		// ret
+		else if (icode == 4'b1001) begin
+			valP = PC + 1;
+		end
+
+		// pushq rA
+		else if (icode == 4'b1010) begin
+			regids = instruction_memory[PC + 1];
+			rA = regids[7:4];
+			rB = regids[3:0];
+			valP = PC + 2;
+		end
+
+		// popq rA
+		else if (icode == 4'b1011) begin
+			regids = instruction_memory[PC + 1];
+			rA = regids[7:4];
+			rB = regids[3:0];
+			valP = PC + 2;
+		end
+
+		// Invalid instruction encountered
+		else begin
+			instr_valid = 0;
+		end
+	end
 
 endmodule
-
-
-
