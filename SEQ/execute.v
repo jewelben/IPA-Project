@@ -1,4 +1,4 @@
-`include "alu/alu.v"
+`include "ALU/alu.v"
 
 module cond (ifun, CC, Cnd);
 
