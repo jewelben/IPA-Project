@@ -15,7 +15,7 @@ input [3:0] rA;
 input [3:0] rB;
 output reg [63:0] valA;
 output reg [63:0] valB;
-reg [63:0] register_memory[14:0];
+reg [63:0] register_memory[0:14];
 
 /*
 
@@ -37,6 +37,25 @@ reg [63:0] register_memory[14:0];
 
 */
 
+// For testing purposes, hardcoding the values stored in the registers
+initial begin
+    register_memory[0] = 64'd0;
+    register_memory[1] = 64'd1;
+    register_memory[2] = 64'd2;
+    register_memory[3] = 64'd3;
+    register_memory[4] = 64'd4;
+    register_memory[5] = 64'd5;
+    register_memory[6] = 64'd7;
+    register_memory[7] = 64'd7;
+    register_memory[8] = 64'd8;
+    register_memory[9] = 64'd9;
+    register_memory[10] = 64'd10;
+    register_memory[11] = 64'd11;
+    register_memory[12] = 64'd12;
+    register_memory[13] = 64'd13;
+    register_memory[14] = 64'd14;
+end
+
 always@(posedge clk)
 begin
 
@@ -48,35 +67,35 @@ begin
     begin
         valB = register_memory[rB];
     end
-    else if(icode == 4b'0100)   // rmmovq
-    begin
-    valA = register_memory[rA];
-    valB = register_memory[rB];
-    end
-    else if(icode == 4b'0101)   // mrmovq
-    begin
-        valB = register_memory[rB];
-    end 
-    else if(icode == 4b'0110)   // OPq
+    else if(icode == 4'b0100)   // rmmovq
     begin
         valA = register_memory[rA];
         valB = register_memory[rB];
     end
-    else if(icode == 4b'1000)   // call
+    else if(icode == 4'b0101)   // mrmovq
+    begin
+        valB = register_memory[rB];
+    end 
+    else if(icode == 4'b0110)   // OPq
+    begin
+        valA = register_memory[rA];
+        valB = register_memory[rB];
+    end
+    else if(icode == 4'b1000)   // call
     begin
         valB = register_memory[4];
     end
-    else if(icode == 4b'1001)   // ret
+    else if(icode == 4'b1001)   // ret
     begin
         valA = register_memory[4];
         valB = register_memory[4];
     end 
-    else if(icode == 4b'1010)   // pushq
+    else if(icode == 4'b1010)   // pushq
     begin
         valA = register_memory[rA];
         valB = register_memory[4];
     end
-    else if(icode == 4b'1011)   // popq
+    else if(icode == 4'b1011)   // popq
     begin
         valA = register_memory[4];
         valB = register_memory[4];

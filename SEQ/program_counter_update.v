@@ -1,15 +1,16 @@
-module pc_update(
+module program_counter_update(
     input clk,
-    input reg [63:0] PC,
+    input [63:0] PC,
     input cnd,
-    input reg [3:0] icode,
-    input reg [63:0] valC,
-    input reg [63:0] valM,
-    input reg [63:0] valP,
+    input [3:0] icode,
+    input [63:0] valC,
+    input [63:0] valM,
+    input [63:0] valP,
     output reg [63:0] new_pc
 );
 
 always@(posedge clk)
+begin
 
     if(icode == 4'b1000)    // call
     begin
