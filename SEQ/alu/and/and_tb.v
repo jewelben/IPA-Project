@@ -1,22 +1,16 @@
-module andtest;
+module and_tb;
 
 	reg    signed [63:0] in1;
 	reg    signed [63:0] in2;
 	output signed [63:0] out;
-	output OF_FLAG;
 
-	and64bit uut (
-		.out     (out),
-		.OF_FLAG (OF_FLAG),
-		.in1     (in1),
-		.in2     (in2)
-	);
+	and64bit uut (in1, in2, out);
 
 	initial begin
-		$dumpfile("andtest.vcd");
-		$dumpvars(0, andtest);
+		$dumpfile("and_tb.vcd");
+		$dumpvars(0, and_tb);
 
-		$monitor($time, " in1 = %b\n\t\t     in2 = %b\n\t\t     out = %b\n\t\t     OF_FLAG = %d\n", in1, in2, out, OF_FLAG);
+		$monitor($time, " in1 = %b\n\t\t     in2 = %b\n\t\t     out = %b\n", in1, in2, out);
 
 		in1 = 64'b0; in2 = 64'b0;
 		#20 in1 =  64'b100110; in2 =  64'b110001;
